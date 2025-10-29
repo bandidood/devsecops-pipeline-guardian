@@ -1,0 +1,61 @@
+rules:
+  # Security Rules
+  - id: sql-injection-detection
+    patterns:
+      - pattern: execute($QUERY)
+      - pattern-not: execute("...")
+    message: Potential SQL injection vulnerability detected
+    severity: ERROR
+    languages: [python, javascript, java]
+    
+  - id: hardcoded-credentials
+    patterns:
+      - pattern: password = "..."
+      - pattern: api_key = "..."
+      - pattern: secret = "..."
+    message: Hardcoded credentials detected - use environment variables
+    severity: ERROR
+    languages: [python, javascript, java, go]
+    
+  - id: insecure-random
+    patterns:
+      - pattern: random.random()
+      - pattern: Math.random()
+    message: Using insecure random number generator - use secrets module
+    severity: WARNING
+    languages: [python, javascript]
+    
+  - id: unsafe-deserialization
+    patterns:
+      - pattern: pickle.loads($DATA)
+      - pattern: yaml.load($DATA)
+    message: Unsafe deserialization detected
+    severity: ERROR
+    languages: [python]
+    
+  - id: command-injection
+    patterns:
+      - pattern: os.system($CMD)
+      - pattern: subprocess.call($CMD, shell=True)
+    message: Potential command injection vulnerability
+    severity: ERROR
+    languages: [python]
+    
+  - id: xss-vulnerability
+    patterns:
+      - pattern: innerHTML = $VAR
+      - pattern: document.write($VAR)
+    message: Potential XSS vulnerability
+    severity: ERROR
+    languages: [javascript]
+
+# Semgrep configuration options
+options:
+  # Enable all auto-fixable rules
+  autofix: false
+  
+  # Maximum depth for directory traversal
+  max_target_bytes: 1000000
+  
+  # Number of jobs to run in parallel
+  jobs: 4

@@ -1,0 +1,33 @@
+# Snyk (https://snyk.io) policy file
+
+version: v1.25.0
+
+# Ignore specific vulnerabilities
+ignore:
+  # Example: Ignore low severity vulnerabilities in dev dependencies
+  'SNYK-JS-LODASH-590103':
+    - '*':
+        reason: 'Development dependency only, not in production'
+        expires: '2025-12-31T00:00:00.000Z'
+
+# Patch vulnerabilities
+patch: {}
+
+# Language settings
+language-settings:
+  python: '3.11'
+  node: '20.x'
+
+# Exclude paths from scanning
+exclude:
+  - tests/
+  - examples/
+  - docs/
+  - '*.test.js'
+  - '*.spec.js'
+
+# Fail conditions
+failThreshold: 'high'
+
+# Organization settings
+organization: 'devsecops-pipeline-guardian'

@@ -1,0 +1,69 @@
+env:
+  contexts:
+    - name: "Default Context"
+      urls:
+        - "http://localhost:8080"
+      includePaths:
+        - "http://localhost:8080/.*"
+      excludePaths:
+        - "http://localhost:8080/logout"
+        - "http://localhost:8080/admin/.*"
+      authentication:
+        method: "form"
+        parameters:
+          loginUrl: "http://localhost:8080/login"
+          loginRequestData: "username={%username%}&password={%password%}"
+        verification:
+          method: "response"
+          loggedInRegex: "\\QLogout\\E"
+          loggedOutRegex: "\\QLogin\\E"
+      sessionManagement:
+        method: "cookie"
+        
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      maxDuration: 5
+      maxDepth: 5
+      user: "scanner"
+    
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+      
+  - type: activeScan
+    parameters:
+      maxRuleDurationInMins: 5
+      maxScanDurationInMins: 10
+      policy: "API-Scan-Minimal"
+      delayInMs: 0
+      threadPerHost: 5
+    policyDefinition:
+      rules:
+        - id: 40012  # Cross Site Scripting (Reflected)
+          threshold: "medium"
+        - id: 40014  # Cross Site Scripting (Persistent)
+          threshold: "medium"
+        - id: 40018  # SQL Injection
+          threshold: "medium"
+        - id: 10202  # Absence of Anti-CSRF Tokens
+          threshold: "low"
+    
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "reports"
+      reportFile: "zap-report.html"
+      reportTitle: "ZAP DAST Scanning Report"
+      reportDescription: "Automated DAST scan results"
+      
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "reports"
+      reportFile: "zap-report.json"

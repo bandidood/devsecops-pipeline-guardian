@@ -1,0 +1,223 @@
+stages:
+  - security-scan
+  - build
+  - test
+  - policy-check
+  - deploy
+
+variables:
+  PYTHON_VERSION: "3.11"
+  DOCKER_DRIVER: overlay2
+  SECURE_LOG_LEVEL: "info"
+
+# Secret Detection
+secret-detection:
+  stage: security-scan
+  image: trufflesecurity/trufflehog:latest
+  script:
+    - trufflehog filesystem . --only-verified --json > secret-scan-results.json
+  artifacts:
+    reports:
+      secret_detection: secret-scan-results.json
+    paths:
+      - secret-scan-results.json
+    expire_in: 7 days
+  allow_failure: false
+
+# SAST with Semgrep
+sast-semgrep:
+  stage: security-scan
+  image: returntocorp/semgrep:latest
+  script:
+    - semgrep scan --config=auto --sarif -o semgrep-report.sarif
+    - semgrep scan --config=auto --json -o semgrep-report.json
+  artifacts:
+    reports:
+      sast: semgrep-report.sarif
+    paths:
+      - semgrep-report.json
+      - semgrep-report.sarif
+    expire_in: 7 days
+
+# SAST with SonarQube
+sast-sonarqube:
+  stage: security-scan
+  image: sonarsource/sonar-scanner-cli:latest
+  script:
+    - sonar-scanner
+      -Dsonar.projectKey=$CI_PROJECT_NAME
+      -Dsonar.sources=src
+      -Dsonar.host.url=$SONAR_HOST_URL
+      -Dsonar.login=$SONAR_TOKEN
+  only:
+    - merge_requests
+    - main
+
+# Dependency Scanning
+dependency-scan:
+  stage: security-scan
+  image: owasp/dependency-check:latest
+  script:
+    - |
+      /usr/share/dependency-check/bin/dependency-check.sh \
+        --project "DevSecOps Guardian" \
+        --scan . \
+        --format ALL \
+        --out reports/dependency \
+        --failOnCVSS 7
+  artifacts:
+    reports:
+      dependency_scanning: reports/dependency/dependency-check-report.json
+    paths:
+      - reports/dependency/
+    expire_in: 7 days
+
+# Snyk Dependency Scan
+snyk-scan:
+  stage: security-scan
+  image: snyk/snyk:python-3.11
+  script:
+    - snyk auth $SNYK_TOKEN
+    - snyk test --severity-threshold=high --json-file-output=snyk-results.json || true
+    - snyk monitor
+  artifacts:
+    paths:
+      - snyk-results.json
+    expire_in: 7 days
+  allow_failure: true
+
+# Container Security Scan
+container-scan:
+  stage: security-scan
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    # Trivy scan
+    - docker run --rm -v /var/run/docker.sock:/var/run/docker.sock 
+        aquasec/trivy:latest image 
+        --severity CRITICAL,HIGH 
+        --format json 
+        --output trivy-report.json 
+        $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  artifacts:
+    reports:
+      container_scanning: trivy-report.json
+    paths:
+      - trivy-report.json
+    expire_in: 7 days
+
+# Build Application
+build:
+  stage: build
+  image: python:3.11
+  script:
+    - pip install -r requirements.txt
+    - python -m pytest tests/ --cov=src --cov-report=xml
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage.xml
+    expire_in: 7 days
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+
+# OPA Policy Evaluation
+policy-check:
+  stage: policy-check
+  image: openpolicyagent/opa:latest
+  script:
+    - opa test config/opa/*.rego -v
+    - |
+      # Aggregate scan results
+      python scripts/report/aggregate-results.py
+    - |
+      # Evaluate against OPA policy
+      opa eval -d config/opa/security-gates.rego \
+        -i aggregated-results.json \
+        "data.devsecops.security.allow" \
+        | tee policy-decision.json
+    - |
+      # Check if deployment is allowed
+      if ! grep -q '"result":true' policy-decision.json; then
+        echo "Security policy check failed!"
+        exit 1
+      fi
+  artifacts:
+    paths:
+      - policy-decision.json
+      - aggregated-results.json
+    expire_in: 7 days
+  needs:
+    - sast-semgrep
+    - dependency-scan
+    - container-scan
+
+# DAST Scan
+dast-zap:
+  stage: test
+  image: owasp/zap2docker-stable:latest
+  services:
+    - name: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+      alias: app
+  script:
+    - mkdir -p reports/dast
+    - |
+      zap-baseline.py \
+        -t http://app:8080 \
+        -r reports/dast/zap-baseline-report.html \
+        -J reports/dast/zap-baseline-report.json
+    - |
+      zap-full-scan.py \
+        -t http://app:8080 \
+        -r reports/dast/zap-full-report.html \
+        -J reports/dast/zap-full-report.json
+  artifacts:
+    reports:
+      dast: reports/dast/zap-full-report.json
+    paths:
+      - reports/dast/
+    expire_in: 7 days
+  allow_failure: true
+  only:
+    - merge_requests
+
+# Generate Security Report
+security-report:
+  stage: policy-check
+  image: python:3.11
+  script:
+    - pip install jinja2 pyyaml
+    - python scripts/report/generate-security-report.py
+  artifacts:
+    paths:
+      - reports/consolidated-security-report.html
+      - reports/summary.md
+    expire_in: 30 days
+  needs:
+    - secret-detection
+    - sast-semgrep
+    - dependency-scan
+    - container-scan
+    - policy-check
+
+# Deploy to Production (with approval)
+deploy-production:
+  stage: deploy
+  image: docker:latest
+  script:
+    - echo "Deploying to production..."
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  environment:
+    name: production
+  when: manual
+  only:
+    - main
+  needs:
+    - policy-check
+    - security-report

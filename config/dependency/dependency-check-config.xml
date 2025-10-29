@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dependencyCheck>
+    <!-- Project Information -->
+    <project>
+        <name>DevSecOps Pipeline Guardian</name>
+        <version>1.0.0</version>
+    </project>
+    
+    <!-- Scan Configuration -->
+    <scan>
+        <path>./src</path>
+        <path>./package.json</path>
+        <path>./requirements.txt</path>
+        <path>./pom.xml</path>
+        <path>./build.gradle</path>
+    </scan>
+    
+    <!-- Suppressions -->
+    <suppressions>
+        <suppression>
+            <notes>False positive for development dependencies</notes>
+            <cve>CVE-2024-XXXXX</cve>
+        </suppression>
+    </suppressions>
+    
+    <!-- Report Configuration -->
+    <reports>
+        <format>HTML</format>
+        <format>JSON</format>
+        <format>XML</format>
+        <outputDirectory>./reports/dependency</outputDirectory>
+    </reports>
+    
+    <!-- Vulnerability Thresholds -->
+    <failBuildOnCVSS>7.0</failBuildOnCVSS>
+    
+    <!-- Analyzers -->
+    <analyzers>
+        <assemblyEnabled>true</assemblyEnabled>
+        <jarEnabled>true</jarEnabled>
+        <nodePackageEnabled>true</nodePackageEnabled>
+        <pythonDistributionEnabled>true</pythonDistributionEnabled>
+        <rubyGemsEnabled>true</rubyGemsEnabled>
+        <composerEnabled>true</composerEnabled>
+    </analyzers>
+    
+    <!-- Update NVD Database -->
+    <autoUpdate>true</autoUpdate>
+    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
+</dependencyCheck>

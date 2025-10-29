@@ -1,0 +1,75 @@
+scan:
+  # Security checks to perform
+  security-checks:
+    - vuln
+    - config
+    - secret
+  
+  # Severity levels to report
+  severity:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+  
+  # Vulnerability database
+  db:
+    repository: "ghcr.io/aquasecurity/trivy-db"
+    skip-update: false
+  
+  # Timeout settings
+  timeout: 5m0s
+  
+  # Ignore unfixed vulnerabilities
+  ignore-unfixed: false
+  
+  # Exit code when vulnerabilities are found
+  exit-code: 1
+  
+  # Vuln type filters
+  vuln-type:
+    - os
+    - library
+
+# Report format
+format: json
+template: "@/contrib/sarif.tpl"
+
+# Output file
+output: "trivy-report.json"
+
+# Skip files and directories
+skip-dirs:
+  - "node_modules"
+  - "vendor"
+  - "test"
+  - "tests"
+
+# Skip specific checks
+skip-checks:
+  - DS002  # Example: root user check (if needed)
+
+# Cache settings
+cache:
+  backend: fs
+  dir: ".trivy-cache"
+  clear: false
+
+# Offline mode
+offline-scan: false
+
+# Light mode (skip license detection)
+light: false
+
+# Policy settings
+policy:
+  # Custom policy file path
+  policy-file: "config/container/trivy-policy.rego"
+  
+  # Policy namespaces
+  policy-namespaces:
+    - "devsecops.container"
+
+# Compliance standards
+compliance:
+  - docker-cis
+  - k8s-cis
