@@ -1,0 +1,48 @@
+# Development Dependencies for DevSecOps Pipeline Guardian
+
+# Core production dependencies (included for reference)
+-r requirements.txt
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-timeout==2.2.0
+coverage==7.3.2
+
+# Code Quality & Linting
+black==23.11.0
+flake8==6.1.0
+flake8-bugbear==23.11.28
+flake8-docstrings==1.7.0
+flake8-import-order==0.18.2
+isort==5.12.0
+mypy==1.7.1
+
+# Type Stubs
+types-PyYAML==6.0.12.12
+types-redis==4.6.0.11
+types-requests==2.31.0.10
+
+# Pre-commit Hooks
+pre-commit==3.5.0
+
+# Documentation
+sphinx==7.2.6
+sphinx-rtd-theme==2.0.0
+sphinx-autodoc-typehints==1.25.2
+
+# Security Scanning
+bandit==1.7.5
+safety==2.3.5
+
+# Development Tools
+ipython==8.17.2
+ipdb==0.13.13
+
+# Load Testing
+locust==2.18.0
+
+# API Testing
+httpx==0.25.2

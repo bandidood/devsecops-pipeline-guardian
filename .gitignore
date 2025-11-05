@@ -28,6 +28,8 @@ ENV/
 .venv
 
 # IDEs
+WARP.md
+.Claude/
 .vscode/
 .idea/
 *.swp

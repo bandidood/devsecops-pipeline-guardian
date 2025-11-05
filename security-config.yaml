@@ -1,0 +1,87 @@
+# DevSecOps Pipeline Guardian - Security Configuration
+
+# SAST - Static Application Security Testing
+sast:
+  tools:
+    - sonarqube
+    - semgrep
+  severity_threshold: HIGH
+  fail_on_new_issues: true
+  sonar_host_url: ${SONAR_HOST_URL}
+  sonar_token: ${SONAR_TOKEN}
+
+# DAST - Dynamic Application Security Testing
+dast:
+  tools:
+    - zap
+  scan_type: baseline  # Options: baseline, full
+  target_url: http://localhost:8080
+  zap_host: ${ZAP_HOST}
+  zap_api_key: ${ZAP_API_KEY}
+  timeout_minutes: 30
+
+# Dependency Scanning
+dependency:
+  tools:
+    - snyk
+    - dependency-check
+  cvss_threshold: 7.0
+  fail_on_critical: true
+  snyk_token: ${SNYK_TOKEN}
+  nvd_api_key: ${NVD_API_KEY}
+  ignore_dev_dependencies: false
+
+# Container Security Scanning
+container:
+  tools:
+    - trivy
+  severity: CRITICAL,HIGH
+  ignore_unfixed: false
+  scan_type: os,library  # Options: os, library, config, secret
+  timeout_minutes: 15
+
+# Policy Enforcement (OPA)
+policy:
+  enabled: true
+  opa_url: ${OPA_URL}
+  policy_package: devsecops.security
+  fail_on_violations: true
+  security_score_threshold: 70
+
+# Thresholds for blocking deployments
+thresholds:
+  critical_vulnerabilities: 0
+  high_vulnerabilities: 5
+  medium_vulnerabilities: 20
+  security_score_min: 70
+
+# Notifications
+notifications:
+  enabled: true
+  channels:
+    - email
+    - slack
+  on_failure: true
+  on_success: false
+  recipients:
+    - security-team@example.com
+
+# Reporting
+reporting:
+  formats:
+    - json
+    - sarif
+    - html
+  retention_days: 90
+  storage_path: ./reports
+
+# Integration Settings
+integrations:
+  github:
+    enabled: true
+    create_issues: true
+    comment_on_pr: true
+  jira:
+    enabled: false
+    project_key: SEC
+    issue_type: Security Bug
