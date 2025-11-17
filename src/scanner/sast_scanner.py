@@ -187,18 +187,91 @@ class SASTScanner:
     async def _fetch_sonarqube_issues(self, host: str, token: str, project_key: str) -> List[Dict]:
         """
         Fetch issues from SonarQube API
-        
+
         Args:
             host: SonarQube host URL
             token: Authentication token
             project_key: Project key
-            
+
         Returns:
             List of vulnerabilities
         """
-        # TODO: Implement SonarQube API integration with aiohttp
-        # For now, return empty list
-        return []
+        import aiohttp
+        import base64
+
+        self.logger.info(f"Fetching issues from SonarQube for project: {project_key}")
+
+        vulnerabilities = []
+
+        try:
+            # Prepare authentication
+            auth_header = base64.b64encode(f"{token}:".encode()).decode()
+            headers = {
+                'Authorization': f'Basic {auth_header}'
+            }
+
+            # API endpoint for issues
+            api_url = f"{host}/api/issues/search"
+            params = {
+                'componentKeys': project_key,
+                'types': 'VULNERABILITY,SECURITY_HOTSPOT',
+                'ps': 500,  # Page size
+                'p': 1      # Page number
+            }
+
+            async with aiohttp.ClientSession(headers=headers) as session:
+                # Fetch issues (handle pagination)
+                while True:
+                    async with session.get(api_url, params=params) as response:
+                        if response.status != 200:
+                            self.logger.error(f"SonarQube API error: {response.status}")
+                            break
+
+                        data = await response.json()
+                        issues = data.get('issues', [])
+
+                        # Parse issues
+                        for issue in issues:
+                            vuln = {
+                                'id': issue.get('key', 'unknown'),
+                                'title': issue.get('message', 'No message'),
+                                'severity': self._map_sonar_severity(issue.get('severity', 'MINOR')),
+                                'file': issue.get('component', '').split(':')[-1],  # Extract file path
+                                'line': issue.get('line', 0),
+                                'tool': 'sonarqube',
+                                'type': issue.get('type', 'VULNERABILITY'),
+                                'status': issue.get('status', 'OPEN'),
+                                'effort': issue.get('effort', ''),
+                                'rule': issue.get('rule', '')
+                            }
+                            vulnerabilities.append(vuln)
+
+                        # Check if there are more pages
+                        paging = data.get('paging', {})
+                        total_pages = (paging.get('total', 0) + paging.get('pageSize', 500) - 1) // paging.get('pageSize', 500)
+
+                        if params['p'] >= total_pages:
+                            break
+
+                        params['p'] += 1
+
+            self.logger.info(f"Fetched {len(vulnerabilities)} issues from SonarQube")
+            return vulnerabilities
+
+        except Exception as e:
+            self.logger.error(f"Error fetching SonarQube issues: {str(e)}")
+            return []
+
+    def _map_sonar_severity(self, sonar_severity: str) -> str:
+        """Map SonarQube severity to standardized levels"""
+        severity_map = {
+            'BLOCKER': 'critical',
+            'CRITICAL': 'critical',
+            'MAJOR': 'high',
+            'MINOR': 'medium',
+            'INFO': 'low'
+        }
+        return severity_map.get(sonar_severity.upper(), 'medium')
     
     def _parse_semgrep_results(self, semgrep_output: Dict) -> List[Dict]:
         """

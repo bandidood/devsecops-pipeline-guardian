@@ -11,6 +11,7 @@ import logging
 
 from src.orchestrator.security_orchestrator import SecurityOrchestrator, ScanType
 from src.api.dependencies import get_orchestrator, get_config
+from src.monitoring.metrics import get_metrics_collector
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -65,6 +66,26 @@ class ScanResultResponse(BaseModel):
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "DevSecOps Pipeline Guardian"}
+
+
+# Prometheus metrics endpoint
+@app.get("/metrics", tags=["Monitoring"])
+async def prometheus_metrics():
+    """
+    Prometheus metrics endpoint
+
+    Returns:
+        Prometheus-formatted metrics
+    """
+    from fastapi.responses import Response
+
+    metrics_collector = get_metrics_collector()
+    metrics_data = metrics_collector.get_metrics()
+
+    return Response(
+        content=metrics_data,
+        media_type=metrics_collector.get_content_type()
+    )
 
 
 # Scan endpoints

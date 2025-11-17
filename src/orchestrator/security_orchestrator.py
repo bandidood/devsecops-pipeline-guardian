@@ -15,6 +15,7 @@ from src.scanner.dast_scanner import DASTScanner
 from src.scanner.dependency_scanner import DependencyScanner
 from src.scanner.container_scanner import ContainerScanner
 from src.policies.policy_evaluator import PolicyEvaluator
+from src.reporting.report_generator import ReportGenerator
 
 
 class ScanType(Enum):
@@ -59,7 +60,12 @@ class SecurityOrchestrator:
         
         # Initialize policy evaluator
         self.policy_evaluator = PolicyEvaluator(config.get('policy', {}))
-        
+
+        # Initialize report generator
+        self.report_generator = ReportGenerator(
+            output_dir=config.get('reporting', {}).get('storage_path', './reports')
+        )
+
         # Scan state
         self.scan_results = {}
         self.scan_status = {}
@@ -247,10 +253,8 @@ class SecurityOrchestrator:
     
     def _convert_to_sarif(self, results: Dict) -> str:
         """Convert results to SARIF format"""
-        # TODO: Implement SARIF conversion
-        pass
-    
+        return self.report_generator.generate(results, format='sarif')
+
     def _generate_html_report(self, results: Dict) -> str:
         """Generate HTML report"""
-        # TODO: Implement HTML report generation
-        pass
+        return self.report_generator.generate(results, format='html')
