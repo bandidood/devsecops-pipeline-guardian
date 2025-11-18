@@ -1,0 +1,159 @@
+# Complete Configuration Example for DevSecOps Pipeline Guardian
+
+# SAST - Static Application Security Testing
+sast:
+  tools:
+    - sonarqube
+    - semgrep
+  severity_threshold: HIGH
+  fail_on_new_issues: true
+  sonar_host_url: ${SONAR_HOST_URL:-http://localhost:9000}
+  sonar_token: ${SONAR_TOKEN}
+  semgrep_rules:
+    - auto
+    - p/security-audit
+    - p/owasp-top-ten
+
+# DAST - Dynamic Application Security Testing
+dast:
+  tools:
+    - zap
+  scan_type: baseline  # Options: baseline, full, api
+  target_url: ${TARGET_URL:-http://localhost:8080}
+  zap_host: ${ZAP_HOST:-http://localhost:8090}
+  zap_api_key: ${ZAP_API_KEY}
+  timeout_minutes: 30
+  authentication:
+    enabled: false
+    type: form  # Options: form, http, script
+    login_url: /login
+    username: test_user
+    password: ${TEST_PASSWORD}
+
+# Dependency Scanning
+dependency:
+  tools:
+    - snyk
+    - dependency-check
+  cvss_threshold: 7.0
+  fail_on_critical: true
+  snyk_token: ${SNYK_TOKEN}
+  nvd_api_key: ${NVD_API_KEY}
+  ignore_dev_dependencies: false
+  allowed_licenses:
+    - MIT
+    - Apache-2.0
+    - BSD-3-Clause
+  blocked_licenses:
+    - GPL-3.0
+    - AGPL-3.0
+
+# Container Security Scanning
+container:
+  tools:
+    - trivy
+  severity: CRITICAL,HIGH
+  ignore_unfixed: false
+  scan_type: os,library,config,secret
+  timeout_minutes: 15
+  registries:
+    - name: docker-hub
+      url: https://registry-1.docker.io
+    - name: ghcr
+      url: ghcr.io
+      username: ${GITHUB_USER}
+      password: ${GITHUB_TOKEN}
+
+# Policy Enforcement (OPA)
+policy:
+  enabled: true
+  opa_url: ${OPA_URL:-http://localhost:8181}
+  policy_package: devsecops.security
+  fail_on_violations: true
+  security_score_threshold: 70
+  custom_policies:
+    - config/opa/devsecops-policies.rego
+    - config/opa/custom-rules.rego
+
+# Security Thresholds
+thresholds:
+  critical_vulnerabilities: 0
+  high_vulnerabilities: 5
+  medium_vulnerabilities: 20
+  low_vulnerabilities: 50
+  security_score_min: 70
+  code_coverage_min: 80
+
+# Notifications
+notifications:
+  enabled: true
+  channels:
+    - email
+    - slack
+  on_failure: true
+  on_success: false
+  email:
+    smtp_host: smtp.gmail.com
+    smtp_port: 587
+    smtp_user: ${SMTP_USER}
+    smtp_password: ${SMTP_PASSWORD}
+    from_email: security@example.com
+    recipients:
+      - security-team@example.com
+  slack:
+    webhook_url: ${SLACK_WEBHOOK_URL}
+    channel: '#security-alerts'
+
+# Reporting
+reporting:
+  formats:
+    - json
+    - sarif
+    - html
+    - pdf
+  retention_days: 90
+  storage_path: ./reports
+  auto_upload:
+    enabled: true
+    s3_bucket: ${S3_BUCKET}
+    s3_prefix: security-reports/
+
+# Integration Settings
+integrations:
+  github:
+    enabled: true
+    token: ${GITHUB_TOKEN}
+    create_issues: true
+    comment_on_pr: true
+    label_vulnerabilities: true
+  jira:
+    enabled: false
+    url: ${JIRA_URL}
+    username: ${JIRA_USER}
+    api_token: ${JIRA_TOKEN}
+    project_key: SEC
+    issue_type: Security Bug
+  sonarqube:
+    enabled: true
+    quality_gate_wait: true
+    fail_on_quality_gate: true
+
+# Monitoring & Observability
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+  grafana:
+    enabled: true
+    port: 3001
+  logging:
+    level: INFO
+    format: json
+    output: stdout
+
+# Performance
+performance:
+  max_concurrent_scans: 5
+  scan_timeout_minutes: 60
+  cache_enabled: true
+  cache_ttl_hours: 24

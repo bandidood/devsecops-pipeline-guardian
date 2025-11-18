@@ -1,0 +1,184 @@
+{
+  "dashboard": {
+    "title": "DevSecOps Security Overview",
+    "tags": ["devsecops", "security", "vulnerabilities"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Scans",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(devsecops_scans_total)",
+            "legendFormat": "Total Scans"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 500, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Critical Vulnerabilities",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(devsecops_vulnerabilities_found_total{severity=\"critical\"})",
+            "legendFormat": "Critical"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "High Vulnerabilities",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(devsecops_vulnerabilities_found_total{severity=\"high\"})",
+            "legendFormat": "High"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Average Security Score",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "avg(devsecops_security_score)",
+            "legendFormat": "Score"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 50, "color": "yellow"},
+                {"value": 70, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Vulnerabilities by Severity (24h)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (severity) (increase(devsecops_vulnerabilities_found_total[24h]))",
+            "legendFormat": "{{ severity }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "id": 6,
+        "title": "Scan Duration (p95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(devsecops_scan_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 duration"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      },
+      {
+        "id": 7,
+        "title": "Scans by Type",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (scan_type) (devsecops_scans_total)",
+            "legendFormat": "{{ scan_type }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 12}
+      },
+      {
+        "id": 8,
+        "title": "Policy Decisions",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (decision) (devsecops_policy_evaluations_total)",
+            "legendFormat": "{{ decision }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 12}
+      },
+      {
+        "id": 9,
+        "title": "Active Scans",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "devsecops_active_scans",
+            "legendFormat": "Active Scans"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+      },
+      {
+        "id": 10,
+        "title": "Scanner Errors",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by (scanner, error_type) (devsecops_scanner_errors_total)",
+            "format": "table"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 20}
+      }
+    ]
+  }
+}

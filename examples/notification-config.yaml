@@ -1,0 +1,43 @@
+# Example Notification Configuration for DevSecOps Pipeline Guardian
+
+notifications:
+  enabled: true
+
+  # Notification channels
+  channels:
+    - email
+    - slack
+    - teams
+
+  # Email configuration
+  email:
+    smtp_host: smtp.gmail.com
+    smtp_port: 587
+    smtp_user: security-notifications@example.com
+    smtp_password: ${EMAIL_PASSWORD}  # Use environment variable
+    from_email: security-notifications@example.com
+    use_tls: true
+    recipients:
+      - security-team@example.com
+      - devops@example.com
+      - cto@example.com
+
+  # Slack configuration
+  slack:
+    webhook_url: ${SLACK_WEBHOOK_URL}  # Use environment variable
+    channel: '#security-alerts'
+    username: 'DevSecOps Guardian'
+    icon_emoji: ':shield:'
+
+  # Microsoft Teams configuration
+  teams:
+    webhook_url: ${TEAMS_WEBHOOK_URL}  # Use environment variable
+
+  # Notification triggers
+  on_failure: true      # Send notification when scans fail or find critical issues
+  on_success: false     # Don't send notifications for successful scans
+  on_warning: true      # Send notifications for warnings
+
+  # Notification filtering
+  min_severity: high    # Only notify for high and critical issues
+  notify_on_policy_deny: true  # Always notify when policy denies deployment

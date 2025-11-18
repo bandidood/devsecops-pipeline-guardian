@@ -1,0 +1,121 @@
+# Prometheus Alert Rules for DevSecOps Pipeline Guardian
+
+groups:
+  - name: security_scan_alerts
+    interval: 30s
+    rules:
+      # Alert on critical vulnerabilities
+      - alert: CriticalVulnerabilitiesDetected
+        expr: sum(devsecops_vulnerabilities_found_total{severity="critical"}) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: security-scanner
+        annotations:
+          summary: "Critical vulnerabilities detected"
+          description: "{{ $value }} critical vulnerabilities found in security scans"
+
+      # Alert on high vulnerability threshold
+      - alert: HighVulnerabilitiesThresholdExceeded
+        expr: sum(devsecops_vulnerabilities_found_total{severity="high"}) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: security-scanner
+        annotations:
+          summary: "High vulnerability threshold exceeded"
+          description: "{{ $value }} high severity vulnerabilities detected (threshold: 10)"
+
+      # Alert on scan failures
+      - alert: SecurityScanFailed
+        expr: increase(devsecops_scans_total{status="failed"}[15m]) > 0
+        for: 1m
+        labels:
+          severity: error
+          component: security-scanner
+        annotations:
+          summary: "Security scan failed"
+          description: "{{ $value }} security scans failed in the last 15 minutes"
+
+      # Alert on low security score
+      - alert: LowSecurityScore
+        expr: devsecops_security_score < 50
+        for: 5m
+        labels:
+          severity: warning
+          component: security-scanner
+        annotations:
+          summary: "Security score below threshold"
+          description: "Security score is {{ $value }}/100 (threshold: 50)"
+
+      # Alert on policy denials
+      - alert: PolicyEvaluationDenied
+        expr: increase(devsecops_policy_evaluations_total{decision="deny"}[10m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: policy-engine
+        annotations:
+          summary: "Deployment blocked by policy"
+          description: "{{ $value }} deployments denied by security policy in last 10 minutes"
+
+  - name: scanner_health_alerts
+    interval: 30s
+    rules:
+      # Alert on scanner errors
+      - alert: ScannerErrorsDetected
+        expr: increase(devsecops_scanner_errors_total[15m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+          component: security-scanner
+        annotations:
+          summary: "Multiple scanner errors detected"
+          description: "{{ $value }} scanner errors in the last 15 minutes"
+
+      # Alert on long scan duration
+      - alert: ScanDurationTooHigh
+        expr: histogram_quantile(0.95, rate(devsecops_scan_duration_seconds_bucket[10m])) > 3600
+        for: 10m
+        labels:
+          severity: warning
+          component: security-scanner
+        annotations:
+          summary: "Scan duration exceeds threshold"
+          description: "95th percentile scan duration is {{ $value }}s (threshold: 3600s)"
+
+      # Alert on too many active scans
+      - alert: TooManyActiveScans
+        expr: devsecops_active_scans > 10
+        for: 15m
+        labels:
+          severity: warning
+          component: security-scanner
+        annotations:
+          summary: "High number of concurrent scans"
+          description: "{{ $value }} scans are currently active (threshold: 10)"
+
+  - name: platform_health_alerts
+    interval: 60s
+    rules:
+      # API availability
+      - alert: APIDown
+        expr: up{job="devsecops-guardian"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "DevSecOps Guardian API is down"
+          description: "The main API has been down for more than 2 minutes"
+
+      # High API error rate
+      - alert: HighAPIErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: error
+          component: api
+        annotations:
+          summary: "High API error rate"
+          description: "API error rate is {{ $value }} (threshold: 0.05)"
